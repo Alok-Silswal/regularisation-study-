@@ -1,0 +1,13 @@
+device: cpu
+dataset:
+  dataset_dir: ~/.torch/datasets/CIFAR10
+model:
+  name: cnn
+train:
+  use_apex: False
+  val_ratio: 0.1
+  use_test_as_val: False
+  output_dir: experiments/cifar10/cnn/baseline_seed0
+scheduler:
+  epochs: 40
+  milestones: [20, 30]
