@@ -42,11 +42,3 @@ class Cutout:
         ymax = min(h, ymax)
         image[ymin:ymax, xmin:xmax] = self.mask_color
         return image
-
-
-class DualCutout:
-    def __init__(self, config: yacs.config.CfgNode):
-        self.cutout = Cutout(config)
-
-    def __call__(self, image: np.ndarray) -> np.ndarray:
-        return np.hstack([self.cutout(image), self.cutout(image)])

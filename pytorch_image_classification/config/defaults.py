@@ -19,7 +19,8 @@ config.cudnn.deterministic = False
 
 config.dataset = ConfigNode()
 config.dataset.name = 'CIFAR10'
-config.dataset.dataset_dir = ''
+config.dataset.dataset_dir = ''  # Must be explicitly configured
+config.dataset.download = False  # Explicit control: do not download by default
 config.dataset.image_size = 32
 config.dataset.n_channels = 3
 config.dataset.n_classes = 10
@@ -111,10 +112,6 @@ config.scheduler.type = 'multistep'
 config.scheduler.milestones = [20, 30]
 config.scheduler.lr_decay = 0.1
 config.scheduler.lr_min_factor = 0.001
-
-# Retained because the scheduler implementation may access these fields.
-config.scheduler.T0 = 10
-config.scheduler.T_mul = 1.
 
 
 # ---------------------------------------------------------------------------

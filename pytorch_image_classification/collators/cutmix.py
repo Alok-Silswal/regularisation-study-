@@ -27,6 +27,13 @@ def cutmix(
     y1 = int(np.round(min(cy + h / 2, image_h)))
 
     data[:, :, y0:y1, x0:x1] = shuffled_data[:, :, y0:y1, x0:x1]
+    
+    # IMPORTANT: Recalculate lambda based on actual clipped box area
+    # This ensures the loss weighting matches the true proportion of mixed pixels
+    actual_box_area = (x1 - x0) * (y1 - y0)
+    total_area = image_h * image_w
+    lam = 1.0 - (actual_box_area / total_area)
+    
     targets = (targets, shuffled_targets, lam)
 
     return data, targets

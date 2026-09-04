@@ -11,22 +11,6 @@ def compute_accuracy(config, outputs, targets, augmentation, topk=(1, )):
                 lam * acc1 + (1 - lam) * acc2
                 for acc1, acc2 in zip(accs1, accs2)
             ])
-        elif config.augmentation.use_ricap:
-            weights = []
-            accs_all = []
-            for labels, weight in zip(*targets):
-                weights.append(weight)
-                accs_all.append(accuracy(outputs, labels, topk))
-            accs = []
-            for i in range(len(accs_all[0])):
-                acc = 0
-                for weight, accs_list in zip(weights, accs_all):
-                    acc += weight * accs_list[i]
-                accs.append(acc)
-            accs = tuple(accs)
-        elif config.augmentation.use_dual_cutout:
-            outputs1, outputs2 = outputs[:, 0], outputs[:, 1]
-            accs = accuracy((outputs1 + outputs2) / 2, targets, topk)
         else:
             accs = accuracy(outputs, targets, topk)
     else:

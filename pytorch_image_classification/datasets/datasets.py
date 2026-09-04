@@ -28,60 +28,53 @@ class SubsetDataset(Dataset):
 
 def create_dataset(config: yacs.config.CfgNode,
                    is_train: bool) -> Union[Tuple[Dataset, Dataset], Dataset]:
-    if config.dataset.name in [
-            'CIFAR10',
-            'CIFAR100',
-            'MNIST',
-            'FashionMNIST',
-            'KMNIST',
-    ]:
-        module = getattr(torchvision.datasets, config.dataset.name)
-        if is_train:
-            if config.train.use_test_as_val:
-                train_transform = create_transform(config, is_train=True)
-                val_transform = create_transform(config, is_train=False)
-                train_dataset = module(config.dataset.dataset_dir,
-                                       train=is_train,
-                                       transform=train_transform,
-                                       download=True)
-                test_dataset = module(config.dataset.dataset_dir,
-                                      train=False,
-                                      transform=val_transform,
-                                      download=True)
-                return train_dataset, test_dataset
-            else:
-                dataset = module(config.dataset.dataset_dir,
-                                 train=is_train,
-                                 transform=None,
-                                 download=True)
-                val_ratio = config.train.val_ratio
-                assert val_ratio < 1
-                val_num = int(len(dataset) * val_ratio)
-                train_num = len(dataset) - val_num
-                lengths = [train_num, val_num]
-                train_subset, val_subset = torch.utils.data.dataset.random_split(
-                    dataset, lengths)
-
-                train_transform = create_transform(config, is_train=True)
-                val_transform = create_transform(config, is_train=False)
-                train_dataset = SubsetDataset(train_subset, train_transform)
-                val_dataset = SubsetDataset(val_subset, val_transform)
-                return train_dataset, val_dataset
+    """Create dataset for CIFAR-10 training or evaluation."""
+    if config.dataset.name != 'CIFAR10':
+        raise ValueError(f"Unsupported dataset: {config.dataset.name}")
+    
+    # Validate dataset directory is configured
+    dataset_dir = config.dataset.dataset_dir
+    if not dataset_dir:
+        if config.dataset.download:
+            dataset_dir = str(pathlib.Path.home() / '.torch' / 'datasets' / 'CIFAR10')
         else:
-            transform = create_transform(config, is_train=False)
-            dataset = module(config.dataset.dataset_dir,
-                             train=is_train,
-                             transform=transform,
-                             download=True)
-            return dataset
-    elif config.dataset.name == 'ImageNet':
-        dataset_dir = pathlib.Path(config.dataset.dataset_dir).expanduser()
+            raise RuntimeError(
+                "dataset.dataset_dir must be explicitly specified in configuration. "
+                "Alternatively, set dataset.download=true to use default ~/.torch/datasets/CIFAR10"
+            )
+    
+    # Expand user paths (~/)
+    dataset_dir = pathlib.Path(dataset_dir).expanduser().as_posix()
+    
+    if is_train:
+        # Train/val split using val_ratio
+        dataset = torchvision.datasets.CIFAR10(
+            dataset_dir,
+            train=True,
+            transform=None,
+            download=config.dataset.download
+        )
+        
+        val_ratio = config.train.val_ratio
+        assert val_ratio < 1, "val_ratio must be < 1"
+        val_num = int(len(dataset) * val_ratio)
+        train_num = len(dataset) - val_num
+        lengths = [train_num, val_num]
+        train_subset, val_subset = torch.utils.data.dataset.random_split(
+            dataset, lengths)
+
         train_transform = create_transform(config, is_train=True)
         val_transform = create_transform(config, is_train=False)
-        train_dataset = torchvision.datasets.ImageFolder(
-            dataset_dir / 'train', transform=train_transform)
-        val_dataset = torchvision.datasets.ImageFolder(dataset_dir / 'val',
-                                                       transform=val_transform)
+        train_dataset = SubsetDataset(train_subset, train_transform)
+        val_dataset = SubsetDataset(val_subset, val_transform)
         return train_dataset, val_dataset
     else:
-        raise ValueError()
+        # Test split
+        transform = create_transform(config, is_train=False)
+        dataset = torchvision.datasets.CIFAR10(
+            dataset_dir,
+            train=False,
+            transform=transform,
+            download=config.dataset.download
+        )
+        return dataset

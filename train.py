@@ -81,11 +81,6 @@ def subdivide_batch(config, data, targets):
         targets1, targets2, lam = targets
         target_chunks = [(chunk1, chunk2, lam) for chunk1, chunk2 in zip(
             targets1.chunk(subdivision), targets2.chunk(subdivision))]
-    elif config.augmentation.use_ricap:
-        target_list, weights = targets
-        target_list_chunks = list(
-            zip(*[target.chunk(subdivision) for target in target_list]))
-        target_chunks = [(chunk, weights) for chunk in target_list_chunks]
     else:
         target_chunks = targets.chunk(subdivision)
     return data_chunks, target_chunks
@@ -95,10 +90,6 @@ def send_targets_to_device(config, targets, device):
     if config.augmentation.use_mixup or config.augmentation.use_cutmix:
         t1, t2, lam = targets
         targets = (t1.to(device), t2.to(device), lam)
-    elif config.augmentation.use_ricap:
-        labels, weights = targets
-        labels = [label.to(device) for label in labels]
-        targets = (labels, weights)
     else:
         targets = targets.to(device)
     return targets
@@ -138,16 +129,7 @@ def train(epoch, config, model, optimizer, scheduler, loss_func, train_loader,
         outputs = []
         losses = []
         for data_chunk, target_chunk in zip(data_chunks, target_chunks):
-            if config.augmentation.use_dual_cutout:
-                w = data_chunk.size(3) // 2
-                data1 = data_chunk[:, :, :, :w]
-                data2 = data_chunk[:, :, :, w:]
-                outputs1 = model(data1)
-                outputs2 = model(data2)
-                output_chunk = torch.cat(
-                    (outputs1.unsqueeze(1), outputs2.unsqueeze(1)), dim=1)
-            else:
-                output_chunk = model(data_chunk)
+            output_chunk = model(data_chunk)
             outputs.append(output_chunk)
 
             loss = loss_func(output_chunk, target_chunk)

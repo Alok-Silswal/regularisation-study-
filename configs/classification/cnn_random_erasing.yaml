@@ -1,6 +1,7 @@
 dataset:
   name: CIFAR10
   dataset_dir: ""
+  download: false
   image_size: 32
   n_channels: 3
   n_classes: 10
