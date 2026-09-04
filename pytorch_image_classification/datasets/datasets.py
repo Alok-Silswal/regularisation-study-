@@ -32,16 +32,12 @@ def create_dataset(config: yacs.config.CfgNode,
     if config.dataset.name != 'CIFAR10':
         raise ValueError(f"Unsupported dataset: {config.dataset.name}")
     
-    # Validate dataset directory is configured
+    # Validate dataset directory is explicitly configured
     dataset_dir = config.dataset.dataset_dir
     if not dataset_dir:
-        if config.dataset.download:
-            dataset_dir = str(pathlib.Path.home() / '.torch' / 'datasets' / 'CIFAR10')
-        else:
-            raise RuntimeError(
-                "dataset.dataset_dir must be explicitly specified in configuration. "
-                "Alternatively, set dataset.download=true to use default ~/.torch/datasets/CIFAR10"
-            )
+        raise ValueError(
+            "dataset.dataset_dir must be explicitly specified in configuration."
+        )
     
     # Expand user paths (~/)
     dataset_dir = pathlib.Path(dataset_dir).expanduser().as_posix()

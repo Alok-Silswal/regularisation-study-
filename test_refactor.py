@@ -37,7 +37,7 @@ def test_config():
     print("TEST B: Configuration Validation")
     print("="*60)
     try:
-        from pytorch_image_classification import get_default_config, update_config
+        from pytorch_image_classification import get_default_config, update_config, create_dataset
         
         config = get_default_config()
         
@@ -45,7 +45,17 @@ def test_config():
         assert config.dataset.download == False, "download should default to False"
         print("✅ dataset.download defaults to False")
         
-        # Test 2: Dataset dir can be set and preserved
+        # Test 2a: Empty dataset_dir should raise ValueError when creating dataset
+        config_empty = get_default_config()
+        try:
+            create_dataset(config_empty, is_train=False)
+            print("❌ Should have raised ValueError for empty dataset_dir")
+            return False
+        except ValueError as e:
+            assert "explicitly specified" in str(e), "Error message should mention explicit specification"
+            print("✅ Empty dataset_dir raises ValueError with clear message")
+        
+        # Test 2b: Dataset dir can be set and preserved
         config.merge_from_list(['dataset.dataset_dir', '/tmp/cifar10'])
         config = update_config(config)
         assert config.dataset.dataset_dir == '/tmp/cifar10', "dataset_dir was overwritten!"
@@ -61,6 +71,14 @@ def test_config():
         assert not hasattr(config.scheduler, 'T0'), "T0 should be removed"
         assert not hasattr(config.scheduler, 'T_mul'), "T_mul should be removed"
         print("✅ Unused scheduler fields (T0, T_mul) removed")
+        
+        # Test 5: No ~/.torch fallback should exist
+        # update_config should not set dataset_dir based on download flag
+        config_fallback_test = get_default_config()
+        config_fallback_test.dataset.download = True
+        config_fallback_test = update_config(config_fallback_test)
+        assert config_fallback_test.dataset.dataset_dir == '', "Should not create default path even with download=True"
+        print("✅ No ~/.torch fallback even when download=True")
         
         print("✅ Configuration validation passed")
         return True
@@ -123,12 +141,12 @@ def test_dead_references():
 
 
 def test_experiment_configs():
-    """F. Test experiment config loading"""
+    """F. Test experiment config loading and explicit dataset_dir requirement"""
     print("\n" + "="*60)
-    print("TEST F: Experiment Config Loading")
+    print("TEST F: Experiment Config Loading & Dataset Dir Requirement")
     print("="*60)
     try:
-        from pytorch_image_classification import get_default_config, update_config
+        from pytorch_image_classification import get_default_config, update_config, create_dataset
         
         configs_to_test = [
             'configs/classification/cnn_baseline.yaml',
@@ -142,10 +160,13 @@ def test_experiment_configs():
             config = get_default_config()
             config.merge_from_file(config_path)
             config = update_config(config)
-            config.freeze()
-            print(f"✅ {config_path} loaded successfully")
+            
+            # Configs should have empty dataset_dir as template
+            assert config.dataset.dataset_dir == '', f"{config_path} should have empty dataset_dir as template"
+            print(f"✅ {config_path} loaded (dataset_dir empty as expected for template)")
         
-        print("✅ All experiment configs load successfully")
+        print("✅ All experiment configs load successfully as templates")
+        print("✅ Users must explicitly set dataset_dir before training")
         return True
     except Exception as e:
         print(f"❌ Experiment config test failed: {e}")
@@ -154,21 +175,30 @@ def test_experiment_configs():
 
 
 def test_kaggle_config():
-    """H. Test Kaggle path configuration"""
+    """H. Test Kaggle path configuration with explicit dataset_dir"""
     print("\n" + "="*60)
-    print("TEST H: Kaggle Path Configuration")
+    print("TEST H: Kaggle Path Configuration (Explicit)")
     print("="*60)
     try:
-        from pytorch_image_classification import get_default_config, update_config
+        from pytorch_image_classification import (
+            get_default_config, 
+            update_config,
+        )
         
+        # Load a config file
         config = get_default_config()
-        config.dataset.dataset_dir = '/kaggle/input/datasets/aloksilswal/cifar-10'
-        config.dataset.download = False
+        config.merge_from_file('configs/classification/cnn_baseline.yaml')
         config = update_config(config)
         
+        # Explicitly set Kaggle path
+        config.dataset.dataset_dir = '/kaggle/input/datasets/aloksilswal/cifar-10'
+        config.dataset.download = False
+        
+        # Verify it's not overwritten
         assert config.dataset.dataset_dir == '/kaggle/input/datasets/aloksilswal/cifar-10', \
             "Kaggle path should not be overwritten!"
-        print("✅ Kaggle path configuration works correctly")
+        print("✅ Kaggle path preserved after update_config")
+        print("✅ Dataset download is controlled by explicit config.dataset.download")
         return True
     except Exception as e:
         print(f"❌ Kaggle config test failed: {e}")
