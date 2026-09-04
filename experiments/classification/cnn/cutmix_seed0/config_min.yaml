@@ -1,0 +1,6 @@
+dataset:
+  dataset_dir: /kaggle/working/cifar10
+train:
+  output_dir: experiments/classification/cnn/cutmix_seed0
+augmentation:
+  use_cutmix: True
