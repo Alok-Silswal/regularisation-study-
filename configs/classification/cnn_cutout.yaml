@@ -1,0 +1,41 @@
+dataset:
+  name: CIFAR10
+  dataset_dir: ""
+  image_size: 32
+  n_channels: 3
+  n_classes: 10
+
+model:
+  type: cifar
+  name: cnn
+  init_mode: kaiming_fan_out
+  cnn:
+    channels: [32, 64, 128]
+
+train:
+  seed: 0
+  batch_size: 128
+  optimizer: sgd
+  base_lr: 0.1
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 0.0001
+  val_ratio: 0.1
+  use_test_as_val: false
+  output_dir: experiments/classification/cnn/cutout_seed0
+  use_apex: false
+  precision: O0
+  use_tensorboard: true
+
+augmentation:
+  use_random_crop: true
+  use_random_horizontal_flip: true
+  use_cutout: true
+  use_random_erasing: false
+  use_mixup: false
+  use_cutmix: false
+  cutout:
+    prob: 1.0
+    mask_size: 16
+    cut_inside: false
+    mask_color: 0
