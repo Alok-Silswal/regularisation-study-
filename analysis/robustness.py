@@ -49,6 +49,18 @@ STD = np.array(
 )
 
 
+def resolve_cifar10_root(dataset_root):
+    """Return a root containing torchvision's CIFAR-10 test batch."""
+    root = pathlib.Path(dataset_root).expanduser().resolve(strict=False)
+    test_batch = root / "cifar-10-batches-py" / "test_batch"
+    if not test_batch.is_file():
+        raise FileNotFoundError(
+            "Expected torchvision CIFAR-10 file was not found: "
+            f"{test_batch}"
+        )
+    return root
+
+
 # ============================================================
 # Deterministic robustness transforms
 # ============================================================
@@ -267,9 +279,7 @@ def main():
 
     args = parser.parse_args()
 
-    dataset_root = pathlib.Path(
-        args.dataset_root
-    )
+    dataset_root = resolve_cifar10_root(args.dataset_root)
 
     output_dir = pathlib.Path(
         args.output_dir
