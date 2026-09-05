@@ -1,0 +1,6 @@
+Method,ECE
+Baseline,0.037810
+MixUp,0.128526
+CutMix,0.094471
+CutOut,0.032049
+Random Erasing,0.029922
