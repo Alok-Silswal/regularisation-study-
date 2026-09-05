@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -40,19 +41,45 @@ METHODS = {
 NUM_BINS = 10
 
 
+def resolve_cifar10_root(dataset_root=None):
+    """Return a root containing torchvision's CIFAR-10 batch directory."""
+    candidates = []
+    if dataset_root is not None:
+        candidates.append(Path(dataset_root).expanduser())
+    candidates.extend([
+        CIFAR10_ROOT,
+        Path('/kaggle/input/datasets/aloksilswal/cifar-10'),
+        Path('/kaggle/working/cifar10'),
+    ])
+
+    checked = []
+    for candidate in candidates:
+        candidate = candidate.resolve(strict=False)
+        checked.append(candidate)
+        if (candidate / 'cifar-10-batches-py' / 'test_batch').is_file():
+            return candidate
+
+    raise FileNotFoundError(
+        'Could not find torchvision CIFAR-10 files. Expected '
+        'cifar-10-batches-py/test_batch under one of: '
+        + ', '.join(str(path) for path in checked)
+    )
+
+
 # ============================================================
 # Data
 # ============================================================
 
-def load_ground_truth():
+def load_ground_truth(dataset_root=None):
     """
     Load the ground-truth CIFAR-10 test labels.
 
     No downloading is performed. The dataset must already
     exist locally.
     """
+    root = resolve_cifar10_root(dataset_root)
     dataset = CIFAR10(
-        root=str(CIFAR10_ROOT),
+        root=str(root),
         train=False,
         download=False,
     )
@@ -185,6 +212,14 @@ def plot_reliability_diagrams(results, output_path):
 
 def main():
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--dataset-root',
+        default=None,
+        help='Directory containing cifar-10-batches-py.',
+    )
+    args = parser.parse_args()
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
@@ -195,7 +230,7 @@ def main():
     # Load ground-truth labels
     # --------------------------------------------------------
 
-    targets = load_ground_truth()
+    targets = load_ground_truth(args.dataset_root)
 
     print(f"Ground-truth samples: {len(targets)}")
 

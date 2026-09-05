@@ -11,6 +11,10 @@ from PIL import ImageEnhance, ImageFilter, ImageOps
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from pytorch_image_classification import (
     create_model,
     get_default_config,
@@ -21,8 +25,6 @@ from pytorch_image_classification import (
 # ============================================================
 # Paths
 # ============================================================
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 OUTPUT_DIR = (
     PROJECT_ROOT
