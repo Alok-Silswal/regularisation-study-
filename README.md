@@ -2,183 +2,130 @@
 
 ## Overview
 
-This project investigates how commonly used regularisation and data-augmentation strategies affect model performance in two different computer vision tasks:
+This project investigates how commonly used regularisation and data-augmentation strategies affect performance across two computer vision tasks:
 
 1. **Image classification** on CIFAR-10
 2. **Semantic segmentation** on Oxford-IIIT Pet
 
-The primary objective is to examine whether strategies that are useful for image classification provide similar benefits when transferred to dense pixel-level prediction.
+The central motivation is to examine whether regularisation strategies that are commonly effective for image classification provide similar benefits when transferred to **dense pixel-level prediction**.
 
-The study evaluates both **clean test performance** and behaviour under simple **distribution shifts**, together with **predictive calibration** for classification.
+The study evaluates each training strategy from multiple perspectives:
 
-The evaluated methods are:
+- Clean test performance
+- Predictive calibration
+- Robustness under controlled distribution shifts
 
-### Classification
-- Baseline
-- MixUp
-- CutMix
-- CutOut
-- Random Erasing
+The classification and segmentation experiments use a common comparative framework, while the model architecture and task-specific evaluation metrics remain appropriate to each task.
 
-### Semantic Segmentation
-- Baseline
-- CutMix
-- CutOut
-- ClassMix
-
-All reported experiments use **seed 0** and should therefore be interpreted as a **controlled single-seed pilot study**, rather than a statistically conclusive multi-seed comparison.
+> **Experimental status:** The reported results are **single-seed pilot results using seed 0**. They are intended for controlled comparison and hypothesis generation, not as evidence of statistically significant or universally generalisable differences.
 
 ---
 
 ## Research Questions
 
-The study is organized around the following questions:
+The project investigates the following questions:
 
-1. Do regularisation strategies improve clean test performance in image classification?
-2. Do the same strategies improve semantic segmentation performance?
-3. Do the effects observed in classification transfer consistently to dense prediction?
-4. How do the methods differ in predictive calibration?
-5. Do regularisation strategies provide improved robustness under simple distribution shifts?
+1. Do regularisation strategies improve clean image-classification performance?
+2. Do the same strategies improve semantic-segmentation performance?
+3. Do classification-level regularisation benefits transfer consistently to dense prediction?
+4. How do the evaluated methods differ in predictive calibration?
+5. Do regularisation strategies improve robustness under simple distribution shifts?
+6. Are the effects of regularisation consistent across different perturbation types?
 
 ---
 
-## Experimental Setup
+# Experimental Tasks
 
-### Image Classification
+## Image Classification
 
-**Dataset:** CIFAR-10
+### Dataset
 
-**Model:** CNN baseline architecture shared across all classification conditions.
+**CIFAR-10**
 
-**Training conditions:**
+CIFAR-10 contains 10 image classes and is used to evaluate the effect of regularisation on image-level classification.
+
+### Model
+
+A CNN-based classification model is used across all classification conditions.
+
+### Training Conditions
+
+The following training conditions were evaluated:
+
 - Baseline
 - MixUp
 - CutMix
 - CutOut
 - Random Erasing
 
-The same model architecture and general training protocol were used across conditions, with the regularisation strategy being the primary experimental difference.
+The same general model architecture and training protocol were maintained across conditions so that the regularisation strategy remained the primary experimental difference.
 
 ---
 
-### Semantic Segmentation
+## Semantic Segmentation
 
-**Dataset:** Oxford-IIIT Pet
+### Dataset
 
-**Model:** U-Net
+**Oxford-IIIT Pet**
 
-**Training conditions:**
+The segmentation task uses the Oxford-IIIT Pet dataset to evaluate whether classification-oriented regularisation strategies transfer to pixel-level prediction.
+
+### Model
+
+A U-Net architecture is used for semantic segmentation.
+
+### Training Conditions
+
+The following conditions were evaluated:
+
 - Baseline
 - CutMix
 - CutOut
 - ClassMix
 
-ClassMix was adapted to the binary foreground/background setting of Oxford-IIIT Pet by transferring foreground regions between samples. This should not be interpreted as an evaluation of conventional multiclass ClassMix in its original setting.
+ClassMix was adapted to the binary foreground/background segmentation setting by transferring foreground regions between samples.
+
+> **Important:** The ClassMix result therefore represents a **binary foreground-based adaptation**, not a direct evaluation of conventional multiclass ClassMix.
 
 ---
 
-## Evaluation Metrics
+# Regularisation Strategies
 
-### Classification
+## MixUp
 
-- Test Loss
-- Accuracy
-- Expected Calibration Error (ECE)
+MixUp constructs training samples by taking convex combinations of images and their corresponding targets.
 
-### Semantic Segmentation
+## CutMix
 
-- Dice coefficient
-- Intersection over Union (IoU)
+CutMix replaces a region of one training image with a region from another image and mixes the corresponding target information.
 
-### Robustness
+## CutOut
 
-For both tasks, deterministic test-time perturbations were applied to the input images:
+CutOut randomly masks a region of the input image during training.
 
-- **Brightness:** factor = `0.6`
-- **Gaussian Blur:** radius = `1.0`
-- **Posterization:** `4` bits per channel
+## Random Erasing
 
-No retraining or test-time adaptation was performed.
+Random Erasing removes a randomly selected rectangular region of the training image and replaces it with modified pixel content.
 
-For segmentation, the ground-truth masks were left unchanged while the corresponding input images were perturbed.
+## ClassMix
+
+ClassMix transfers regions associated with semantic classes between images. In this project, it was adapted to the binary foreground/background segmentation setting of Oxford-IIIT Pet.
 
 ---
 
-# Results
+# Experimental Setup
 
-All experiments use the same model architecture and training protocol within each task. Reported results are from a single held-out test evaluation using **seed 0**.
+All experiments were conducted using the same overall comparative methodology within each task.
 
-## Image Classification — CIFAR-10
+The main controlled factors were:
 
-| Training Condition | Test Loss | Test Accuracy |
-|---|---:|---:|
-| Baseline | 0.3722 | **87.97%** |
-| MixUp | 0.4739 | 87.58% |
-| CutMix | 0.4659 | 86.44% |
-| CutOut | 0.3815 | 87.63% |
-| Random Erasing | **0.3672** | **88.11%** |
+- Dataset
+- Model architecture
+- Training configuration
+- Regularisation strategy
+- Random seed
 
-Random Erasing achieved the highest test accuracy at **88.11%**, only slightly above the baseline at **87.97%**.
-
-The remaining methods did not exceed the baseline:
-- MixUp: 87.58%
-- CutMix: 86.44%
-- CutOut: 87.63%
-
-This indicates that, in this single-seed experiment, regularisation did not produce a consistent improvement in clean classification accuracy.
-
-> **Note:** The test loss values for MixUp and CutMix should not be interpreted as directly comparable to ordinary training loss because these methods use mixed targets during training.
-
----
-
-## Semantic Segmentation — Oxford-IIIT Pet
-
-| Training Condition | Test Dice | Test IoU |
-|---|---:|---:|
-| Baseline | **0.825488** | **0.720302** |
-| CutMix | 0.820811 | 0.714113 |
-| CutOut | 0.820613 | 0.715376 |
-| ClassMix | 0.800127 | 0.687817 |
-
-The baseline achieved the strongest clean segmentation performance on both metrics.
-
-CutMix and CutOut remained relatively close to the baseline, while ClassMix produced a larger performance reduction.
-
-Thus, none of the evaluated segmentation regularisation strategies exceeded the baseline on clean test performance in this pilot experiment.
-
-> **Note:** ClassMix was adapted to the binary foreground/background setting by transferring foreground regions between images. The result should therefore be interpreted specifically for this binary adaptation.
-
----
-
-# Calibration Analysis
-
-Calibration was evaluated for the CIFAR-10 classification models using **Expected Calibration Error (ECE)**.
-
-ECE measures the difference between model confidence and empirical accuracy across confidence bins. Lower values indicate better calibration.
-
-| Method | ECE ↓ |
-|---|---:|
-| Baseline | 0.037810 |
-| MixUp | 0.128526 |
-| CutMix | 0.094471 |
-| CutOut | 0.032049 |
-| Random Erasing | **0.029922** |
-
-Random Erasing produced the lowest ECE, followed closely by CutOut.
-
-The baseline had an ECE of `0.037810`, while MixUp and CutMix showed substantially larger calibration errors.
-
-This provides an additional perspective beyond accuracy: a method can have competitive classification accuracy without necessarily producing well-calibrated confidence estimates.
-
-In this experiment:
-
-- **Random Erasing** achieved both the best clean accuracy and the best ECE.
-- **CutOut** slightly improved calibration relative to the baseline despite having slightly lower accuracy.
-- **MixUp** and **CutMix** showed considerably poorer calibration under this evaluation.
-
-The calibration analysis uses the true CIFAR-10 test labels and the model's predicted probability distributions without temperature scaling or other post-hoc calibration.
-
-A reliability diagram is generated at:
+The current study uses:
 
 ```text
-experiments/analysis/calibration/reliability_diagram.png
+Seed = 0
