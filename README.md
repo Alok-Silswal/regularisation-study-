@@ -1,10 +1,114 @@
-## Results
+# Statistical Evaluation of Regularisation Strategies for Image Classification and Semantic Segmentation
 
-All experiments use the same model architecture and training protocol within
-each task. Reported results are from a single held-out test evaluation using
-seed 0.
+## Overview
 
-### Image Classification — CIFAR-10
+This project investigates how commonly used regularisation and data-augmentation strategies affect model performance in two different computer vision tasks:
+
+1. **Image classification** on CIFAR-10
+2. **Semantic segmentation** on Oxford-IIIT Pet
+
+The primary objective is to examine whether strategies that are useful for image classification provide similar benefits when transferred to dense pixel-level prediction.
+
+The study evaluates both **clean test performance** and behaviour under simple **distribution shifts**, together with **predictive calibration** for classification.
+
+The evaluated methods are:
+
+### Classification
+- Baseline
+- MixUp
+- CutMix
+- CutOut
+- Random Erasing
+
+### Semantic Segmentation
+- Baseline
+- CutMix
+- CutOut
+- ClassMix
+
+All reported experiments use **seed 0** and should therefore be interpreted as a **controlled single-seed pilot study**, rather than a statistically conclusive multi-seed comparison.
+
+---
+
+## Research Questions
+
+The study is organized around the following questions:
+
+1. Do regularisation strategies improve clean test performance in image classification?
+2. Do the same strategies improve semantic segmentation performance?
+3. Do the effects observed in classification transfer consistently to dense prediction?
+4. How do the methods differ in predictive calibration?
+5. Do regularisation strategies provide improved robustness under simple distribution shifts?
+
+---
+
+## Experimental Setup
+
+### Image Classification
+
+**Dataset:** CIFAR-10
+
+**Model:** CNN baseline architecture shared across all classification conditions.
+
+**Training conditions:**
+- Baseline
+- MixUp
+- CutMix
+- CutOut
+- Random Erasing
+
+The same model architecture and general training protocol were used across conditions, with the regularisation strategy being the primary experimental difference.
+
+---
+
+### Semantic Segmentation
+
+**Dataset:** Oxford-IIIT Pet
+
+**Model:** U-Net
+
+**Training conditions:**
+- Baseline
+- CutMix
+- CutOut
+- ClassMix
+
+ClassMix was adapted to the binary foreground/background setting of Oxford-IIIT Pet by transferring foreground regions between samples. This should not be interpreted as an evaluation of conventional multiclass ClassMix in its original setting.
+
+---
+
+## Evaluation Metrics
+
+### Classification
+
+- Test Loss
+- Accuracy
+- Expected Calibration Error (ECE)
+
+### Semantic Segmentation
+
+- Dice coefficient
+- Intersection over Union (IoU)
+
+### Robustness
+
+For both tasks, deterministic test-time perturbations were applied to the input images:
+
+- **Brightness:** factor = `0.6`
+- **Gaussian Blur:** radius = `1.0`
+- **Posterization:** `4` bits per channel
+
+No retraining or test-time adaptation was performed.
+
+For segmentation, the ground-truth masks were left unchanged while the corresponding input images were perturbed.
+
+---
+
+# Results
+
+All experiments use the same model architecture and training protocol within each task. Reported results are from a single held-out test evaluation using **seed 0**.
+
+## Image Classification — CIFAR-10
 
 | Training Condition | Test Loss | Test Accuracy |
 |---|---:|---:|
@@ -14,15 +118,20 @@ seed 0.
 | CutOut | 0.3815 | 87.63% |
 | Random Erasing | **0.3672** | **88.11%** |
 
-Random Erasing achieved the highest test accuracy (88.11%), with the baseline
-close behind at 87.97%. MixUp, CutMix, and CutOut did not improve test accuracy
-over the baseline in this single-seed experiment.
+Random Erasing achieved the highest test accuracy at **88.11%**, only slightly above the baseline at **87.97%**.
 
-> **Note:** Loss values for MixUp and CutMix should not be interpreted as
-> directly comparable to ordinary training loss because these methods train
-> with mixed targets.
+The remaining methods did not exceed the baseline:
+- MixUp: 87.58%
+- CutMix: 86.44%
+- CutOut: 87.63%
 
-### Semantic Segmentation — Oxford-IIIT Pet
+This indicates that, in this single-seed experiment, regularisation did not produce a consistent improvement in clean classification accuracy.
+
+> **Note:** The test loss values for MixUp and CutMix should not be interpreted as directly comparable to ordinary training loss because these methods use mixed targets during training.
+
+---
+
+## Semantic Segmentation — Oxford-IIIT Pet
 
 | Training Condition | Test Dice | Test IoU |
 |---|---:|---:|
@@ -31,73 +140,45 @@ over the baseline in this single-seed experiment.
 | CutOut | 0.820613 | 0.715376 |
 | ClassMix | 0.800127 | 0.687817 |
 
-The baseline achieved the strongest segmentation performance. CutMix and CutOut
-were competitive but did not surpass the baseline, while ClassMix showed a
-larger performance reduction.
+The baseline achieved the strongest clean segmentation performance on both metrics.
 
-> **Note:** ClassMix was adapted to the binary foreground/background setting
-> of Oxford-IIIT Pet by transferring foreground regions between samples.
-> Results are from a single seed and should therefore be interpreted as a
-> controlled pilot comparison rather than evidence of statistically
-> significant differences.
+CutMix and CutOut remained relatively close to the baseline, while ClassMix produced a larger performance reduction.
 
-## Robustness Analysis
+Thus, none of the evaluated segmentation regularisation strategies exceeded the baseline on clean test performance in this pilot experiment.
 
-Robustness was evaluated under deterministic test-time image perturbations to examine how the regularisation strategies behave under simple distribution shifts. The perturbations were applied to the input images only; segmentation masks were left unchanged.
+> **Note:** ClassMix was adapted to the binary foreground/background setting by transferring foreground regions between images. The result should therefore be interpreted specifically for this binary adaptation.
 
-Three fixed perturbations were evaluated:
+---
 
-- **Brightness:** brightness factor = 0.6
-- **Gaussian Blur:** radius = 1.0
-- **Posterization:** 4 bits per channel
+# Calibration Analysis
 
-All robustness results reported below correspond to the **seed-0 pilot experiments**.
+Calibration was evaluated for the CIFAR-10 classification models using **Expected Calibration Error (ECE)**.
 
-### Classification Robustness
+ECE measures the difference between model confidence and empirical accuracy across confidence bins. Lower values indicate better calibration.
 
-For CIFAR-10 classification, robustness is evaluated using clean test accuracy and accuracy degradation under each perturbation.
+| Method | ECE ↓ |
+|---|---:|
+| Baseline | 0.037810 |
+| MixUp | 0.128526 |
+| CutMix | 0.094471 |
+| CutOut | 0.032049 |
+| Random Erasing | **0.029922** |
 
-| Method | Clean Accuracy | Brightness Accuracy | Brightness Degradation | Blur Accuracy | Blur Degradation | Posterize Accuracy | Posterize Degradation |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 87.97% | — | — | — | — | — | — |
-| MixUp | 87.58% | — | — | — | — | — | — |
-| CutMix | 86.44% | — | — | — | — | — | — |
-| CutOut | 87.63% | — | — | — | — | — | — |
-| Random Erasing | 88.11% | — | — | — | — | — | — |
+Random Erasing produced the lowest ECE, followed closely by CutOut.
 
-> Classification robustness results will be populated from the corresponding robustness analysis output.
+The baseline had an ECE of `0.037810`, while MixUp and CutMix showed substantially larger calibration errors.
 
-### Semantic Segmentation Robustness
+This provides an additional perspective beyond accuracy: a method can have competitive classification accuracy without necessarily producing well-calibrated confidence estimates.
 
-For Oxford-IIIT Pet semantic segmentation, robustness is evaluated using Dice and IoU under the same three deterministic image perturbations. Degradation is reported as the absolute decrease from the corresponding clean-test metric.
+In this experiment:
 
-| Method | Clean Dice | Brightness Dice | Δ Dice | Blur Dice | Δ Dice | Posterize Dice | Δ Dice |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 0.825488 | 0.799836 | 0.025652 | 0.813625 | 0.011863 | 0.818992 | 0.006496 |
-| CutMix | 0.820811 | 0.776899 | 0.043912 | 0.813342 | 0.007469 | 0.804074 | 0.016737 |
-| CutOut | 0.820613 | 0.794312 | 0.026301 | 0.810221 | 0.010392 | 0.814009 | 0.006605 |
-| ClassMix | 0.800127 | 0.777320 | 0.022807 | 0.792424 | 0.007704 | 0.796778 | 0.003349 |
+- **Random Erasing** achieved both the best clean accuracy and the best ECE.
+- **CutOut** slightly improved calibration relative to the baseline despite having slightly lower accuracy.
+- **MixUp** and **CutMix** showed considerably poorer calibration under this evaluation.
 
-#### IoU Under Distribution Shift
+The calibration analysis uses the true CIFAR-10 test labels and the model's predicted probability distributions without temperature scaling or other post-hoc calibration.
 
-| Method | Clean IoU | Brightness IoU | Δ IoU | Blur IoU | Δ IoU | Posterize IoU | Δ IoU |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 0.720302 | 0.684612 | 0.035690 | 0.705611 | 0.014690 | 0.710649 | 0.009653 |
-| CutMix | 0.714113 | 0.656779 | 0.057334 | 0.704368 | 0.009745 | 0.691843 | 0.022270 |
-| CutOut | 0.715376 | 0.678717 | 0.036659 | 0.702259 | 0.013116 | 0.705626 | 0.009750 |
-| ClassMix | 0.687817 | 0.657174 | 0.030642 | 0.679989 | 0.007827 | 0.682161 | 0.005656 |
+A reliability diagram is generated at:
 
-### Segmentation Robustness Observations
-
-The robustness results show that the effect of regularisation is perturbation-dependent.
-
-- **Brightness shift:** CutMix exhibits the largest degradation in both Dice (0.043912) and IoU (0.057334), while ClassMix has the smallest absolute degradation.
-- **Gaussian blur:** CutMix shows relatively small degradation in both Dice and IoU, despite its larger degradation under brightness and posterization.
-- **Posterization:** ClassMix shows the smallest degradation in both Dice (0.003349) and IoU (0.005656), whereas CutMix experiences a larger degradation.
-- The baseline achieves the highest clean segmentation performance, while the regularised models do not consistently outperform it under distribution shift.
-
-These results therefore do **not** support a general claim that classification-style regularisation universally improves robustness in semantic segmentation. Instead, robustness appears to depend on both the regularisation strategy and the type of distribution shift.
-
-### Robustness Protocol
-
-The robustness analysis uses deterministic, fixed-severity perturbations and does not involve retraining, test-time adaptation, or additional random seeds. The reported results should therefore be interpreted as a **seed-0 pilot robustness analysis**, rather than as a statistical robustness comparison across repeated experiments.
+```text
+experiments/analysis/calibration/reliability_diagram.png
