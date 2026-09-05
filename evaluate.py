@@ -98,11 +98,15 @@ def main():
 
     model = create_model(config)
     model = apply_data_parallel_wrapper(config, model)
-    checkpointer = Checkpointer(model,
-                                checkpoint_dir=output_dir,
-                                logger=logger,
-                                distributed_rank=get_rank())
-    checkpointer.load(config.test.checkpoint)
+    checkpoint = torch.load(
+        config.test.checkpoint,
+        map_location=torch.device(config.device)
+    )
+
+    if "model" in checkpoint:
+        model.load_state_dict(checkpoint["model"])
+    else:
+        model.load_state_dict(checkpoint)
 
     test_loader = create_dataloader(config, is_train=False)
     _, test_loss = create_loss(config)
