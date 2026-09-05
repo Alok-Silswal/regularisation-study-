@@ -9,8 +9,6 @@ import torch
 import torch.nn.functional as F
 import tqdm
 
-from fvcore.common.checkpoint import Checkpointer
-
 from pytorch_image_classification import (
     apply_data_parallel_wrapper,
     create_dataloader,
@@ -52,6 +50,7 @@ def evaluate(config, model, test_loader, loss_func, logger):
     pred_raw_all = []
     pred_prob_all = []
     pred_label_all = []
+
     with torch.no_grad():
         for data, targets in tqdm.tqdm(test_loader):
             data = data.to(device)
@@ -61,7 +60,9 @@ def evaluate(config, model, test_loader, loss_func, logger):
             loss = loss_func(outputs, targets)
 
             pred_raw_all.append(outputs.cpu().numpy())
-            pred_prob_all.append(F.softmax(outputs, dim=1).cpu().numpy())
+            pred_prob_all.append(
+                F.softmax(outputs, dim=1).cpu().numpy()
+            )
 
             _, preds = torch.max(outputs, dim=1)
             pred_label_all.append(preds.cpu().numpy())
@@ -77,11 +78,14 @@ def evaluate(config, model, test_loader, loss_func, logger):
 
         elapsed = time.time() - start
         logger.info(f'Elapsed {elapsed:.2f}')
-        logger.info(f'Loss {loss_meter.avg:.4f} Accuracy {accuracy:.4f}')
+        logger.info(
+            f'Loss {loss_meter.avg:.4f} Accuracy {accuracy:.4f}'
+        )
 
     preds = np.concatenate(pred_raw_all)
     probs = np.concatenate(pred_prob_all)
     labels = np.concatenate(pred_label_all)
+
     return preds, probs, labels, loss_meter.avg, accuracy
 
 
@@ -94,33 +98,53 @@ def main():
         output_dir = pathlib.Path(config.test.output_dir)
         output_dir.mkdir(exist_ok=True, parents=True)
 
-    logger = create_logger(name=__name__, distributed_rank=get_rank())
+    logger = create_logger(
+        name=__name__,
+        distributed_rank=get_rank()
+    )
 
     model = create_model(config)
     model = apply_data_parallel_wrapper(config, model)
+
+    # Load the trusted training checkpoint.
+    # The checkpoint contains model, optimizer, scheduler, etc.,
+    # so weights_only=False is required with PyTorch 2.6+.
     checkpoint = torch.load(
         config.test.checkpoint,
-        map_location=torch.device(config.device)
+        map_location=torch.device(config.device),
+        weights_only=False,
     )
 
-    if "model" in checkpoint:
+    if isinstance(checkpoint, dict) and "model" in checkpoint:
         model.load_state_dict(checkpoint["model"])
     else:
         model.load_state_dict(checkpoint)
 
-    test_loader = create_dataloader(config, is_train=False)
+    test_loader = create_dataloader(
+        config,
+        is_train=False
+    )
+
     _, test_loss = create_loss(config)
 
-    preds, probs, labels, loss, acc = evaluate(config, model, test_loader,
-                                               test_loss, logger)
+    preds, probs, labels, loss, acc = evaluate(
+        config,
+        model,
+        test_loader,
+        test_loss,
+        logger
+    )
 
-    output_path = output_dir / f'predictions.npz'
-    np.savez(output_path,
-             preds=preds,
-             probs=probs,
-             labels=labels,
-             loss=loss,
-             acc=acc)
+    output_path = output_dir / 'predictions.npz'
+
+    np.savez(
+        output_path,
+        preds=preds,
+        probs=probs,
+        labels=labels,
+        loss=loss,
+        acc=acc,
+    )
 
 
 if __name__ == '__main__':
