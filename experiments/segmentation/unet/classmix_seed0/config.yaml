@@ -1,0 +1,28 @@
+augmentation:
+  classmix_prob: 1.0
+  condition: classmix
+  cutmix_alpha: 1.0
+  cutmix_prob: 1.0
+  cutout_prob: 1.0
+  cutout_size: 32
+  horizontal_flip_prob: 0.5
+dataset:
+  download: False
+  image_size: 128
+  name: OxfordIIITPet
+  num_classes: 2
+  root: /kaggle/input/datasets/aloksilswal/oxford-iiit-pet-official
+  val_ratio: 0.2
+device: cuda
+model:
+  base_channels: 16
+seed: 0
+train:
+  batch_size: 16
+  checkpoint_period: 1
+  epochs: 30
+  learning_rate: 0.001
+  log_period: 50
+  num_workers: 2
+  output_dir: experiments/segmentation/unet/classmix_seed0
+  weight_decay: 0.0001
