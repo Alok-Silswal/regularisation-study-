@@ -15,6 +15,7 @@ PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from analysis.calibration import resolve_cifar10_root
 from pytorch_image_classification import (
     create_model,
     get_default_config,
@@ -47,18 +48,6 @@ STD = np.array(
     [0.2470, 0.2435, 0.2616],
     dtype=np.float32,
 )
-
-
-def resolve_cifar10_root(dataset_root):
-    """Return a root containing torchvision's CIFAR-10 test batch."""
-    root = pathlib.Path(dataset_root).expanduser().resolve(strict=False)
-    test_batch = root / "cifar-10-batches-py" / "test_batch"
-    if not test_batch.is_file():
-        raise FileNotFoundError(
-            "Expected torchvision CIFAR-10 file was not found: "
-            f"{test_batch}"
-        )
-    return root
 
 
 # ============================================================
