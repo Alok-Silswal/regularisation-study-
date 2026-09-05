@@ -30,6 +30,19 @@ Following papers are implemented using PyTorch.
 pip install -r requirements.txt
 ```
 
+## Semantic segmentation
+
+The separate Oxford-IIIT Pet study is implemented in `pytorch_semantic_segmentation/` with a lightweight two-class U-Net. Pet pixels (mask value 1) are foreground; background and boundary labels are treated as background. Set `dataset.root` to a writable dataset parent directory before running. The four study conditions are:
+
+```bash
+python train_segmentation.py --config configs/segmentation/unet_baseline.yaml dataset.root /path/to/data
+python train_segmentation.py --config configs/segmentation/unet_cutmix.yaml dataset.root /path/to/data
+python train_segmentation.py --config configs/segmentation/unet_cutout.yaml dataset.root /path/to/data
+python train_segmentation.py --config configs/segmentation/unet_classmix.yaml dataset.root /path/to/data
+```
+
+Set `dataset.download true` for the first run when the dataset is not already present. Each run writes its resolved config, JSONL validation log, latest checkpoint, and best-Dice model under `experiments/segmentation/`.
+
 ## Usage
 
 ```bash

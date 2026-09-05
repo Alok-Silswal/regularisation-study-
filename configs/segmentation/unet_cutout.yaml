@@ -1,0 +1,15 @@
+device: cuda
+seed: 0
+dataset:
+  root: ''
+  download: false
+  image_size: 128
+train:
+  batch_size: 16
+  epochs: 30
+  learning_rate: 0.001
+  output_dir: experiments/segmentation/unet/cutout_seed0
+augmentation:
+  condition: cutout
+  cutout_size: 32
+  cutout_prob: 1.0
